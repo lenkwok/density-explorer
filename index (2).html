@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Density Explorer - 3D Interactive</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 20px;
+            padding: 30px;
+            min-height: 600px;
+        }
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .object-shelf {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            border: 2px dashed #667eea;
+        }
+        .object-shelf h3 {
+            color: #667eea;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .object-item {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: grab;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .object-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+        .object-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        .object-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        .object-density {
+            font-size: 12px;
+            color: #666;
+        }
+        .density-badge {
+            display: inline-block;
+            background: #764ba2;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .instructions h4 {
+            color: #666;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .instructions ol {
+            margin-left: 18px;
+        }
+        .instructions li {
+            margin-bottom: 6px;
+        }
+        #canvas-container {
+            background: #e8f4f8;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid #667eea;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .feedback {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            font-size: 12px;
+            color: #333;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .feedback.show {
+            opacity: 1;
+        }
+        .reset-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .reset-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            .header h1 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌊 3D Density Explorer</h1>
+            <p>Drag objects into the water and discover density in action!</p>
+        </div>
+        <div class="content">
+            <div class="sidebar">
+                <div class="object-shelf">
+                    <h3>📦 Objects</h3>
+                    <div class="object-item" draggable="true" data-object="iron">
+                        <div class="object-name">🔩 Iron Block</div>
+                        <div class="object-density">Density: <span class="density-badge">7.87 g/cm³</span></div>
+                    </div>
+                    <div class="object-item" draggable="true" data-object="wood">
+                        <div class="object-name">🪵 Wood Cube</div>
+                        <div class="object-density">Density: <span class="density-badge">0.6 g/cm³</span></div>
+                    </div>
+                    <div class="object-item" draggable="true" data-object="plastic">
+                        <div class="object-name">🎲 Plastic Toy</div>
+                        <div class="object-density">Density: <span class="density-badge">0.95 g/cm³</span></div>
+                    </div>
+                    <div class="object-item" draggable="true" data-object="rock">
+                        <div class="object-name">🪨 Rock</div>
+                        <div class="object-density">Density: <span class="density-badge">2.65 g/cm³</span></div>
+                    </div>
+                    <div class="object-item" draggable="true" data-object="cork">
+                        <div class="object-name">🍾 Cork</div>
+                        <div class="object-density">Density: <span class="density-badge">0.24 g/cm³</span></div>
+                    </div>
+                    <div class="object-item" draggable="true" data-object="marble">
+                        <div class="object-name">🔵 Marble</div>
+                        <div class="object-density">Density: <span class="density-badge">2.51 g/cm³</span></div>
+                    </div>
+                </div>
+                <div class="instructions">
+                    <h4>How to Play:</h4>
+                    <ol>
+                        <li><strong>Drag</strong> an object from the shelf</li>
+                        <li><strong>Drop</strong> it into the water</li>
+                        <li><strong>Watch</strong> it sink or float</li>
+                        <li><strong>Try all 6</strong> and spot the pattern!</li>
+                    </ol>
+                </div>
+                <button class="reset-btn" onclick="resetScene()">↻ Reset All</button>
+            </div>
+            <div id="canvas-container">
+                <canvas id="canvas"></canvas>
+                <div class="feedback" id="feedback"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ============ SETUP ============
+        const canvas = document.getElementById('canvas');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xe8f4f8);
+        
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            canvas.clientWidth / canvas.clientHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(0, 3, 5);
+        camera.lookAt(0, 0, 0);
+        
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        renderer.shadowMap.enabled = true;
+        
+        // ============ LIGHTING ============
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 8, 5);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
+        
+        // ============ WATER CONTAINER ============
+        const waterGeometry = new THREE.BoxGeometry(4, 3, 3);
+        const waterMaterial = new THREE.MeshPhongMaterial({
+            color: 0x3ba3d0,
+            transparent: true,
+            opacity: 0.4,
+            shininess: 100
+        });
+        const waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+        waterMesh.position.y = 1.5;
+        scene.add(waterMesh);
+        
+        // Water container edges (non-rendered, for reference)
+        const containerBox = new THREE.Box3().setFromObject(waterMesh);
+        
+        // Water surface marker
+        const surfaceGeometry = new THREE.PlaneGeometry(4, 3);
+        const surfaceMaterial = new THREE.MeshPhongMaterial({
+            color: 0x64b5f6,
+            transparent: true,
+            opacity: 0.2
+        });
+        const surfaceMesh = new THREE.Mesh(surfaceGeometry, surfaceMaterial);
+        surfaceMesh.position.set(0, 3, 0);
+        surfaceMesh.rotation.x = Math.PI / 2;
+        scene.add(surfaceMesh);
+        
+        // ============ OBJECT DEFINITIONS ============
+        const objectDefinitions = {
+            iron: { density: 7.87, color: 0x505050, size: 0.5, name: 'Iron Block' },
+            wood: { density: 0.6, color: 0x8B4513, size: 0.6, name: 'Wood Cube' },
+            plastic: { density: 0.95, color: 0xFF6B6B, size: 0.5, name: 'Plastic Toy' },
+            rock: { density: 2.65, color: 0x9E9E9E, size: 0.45, name: 'Rock' },
+            cork: { density: 0.24, color: 0xD4A574, size: 0.65, name: 'Cork' },
+            marble: { density: 2.51, color: 0x4A90E2, size: 0.35, name: 'Marble' }
+        };
+        
+        // Water density
+        const WATER_DENSITY = 1.0;
+        const GRAVITY = 0.01;
+        const BUOYANT_FORCE = 0.015;
+        
+        // ============ OBJECTS IN SCENE ============
+        const objects = {};
+        
+        function createObject(type) {
+            const def = objectDefinitions[type];
+            const geometry = new THREE.BoxGeometry(def.size, def.size, def.size);
+            const material = new THREE.MeshPhongMaterial({ color: def.color });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            mesh.userData = {
+                type: type,
+                density: def.density,
+                velocity: new THREE.Vector3(0, 0, 0),
+                inWater: false,
+                dropped: false
+            };
+            return mesh;
+        }
+        
+        // ============ DRAG & DROP ============
+        let draggingObject = null;
+        let dragOffsetY = 0;
+        
+        document.addEventListener('dragstart', (e) => {
+            if (!e.target.classList.contains('object-item')) return;
+            draggingObject = e.target.dataset.object;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        
+        document.addEventListener('dragend', (e) => {
+            if (e.target.classList.contains('object-item')) {
+                e.target.classList.remove('dragging');
+            }
+        });
+        
+        const canvasContainer = document.getElementById('canvas-container');
+        canvasContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+        
+        canvasContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (!draggingObject) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width * 2 - 1;
+            const y = -(e.clientY - rect.top) / rect.height * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+            
+            const newObj = createObject(draggingObject);
+            newObj.position.set(
+                raycaster.ray.origin.x,
+                4,
+                raycaster.ray.origin.z
+            );
+            newObj.userData.dropped = true;
+            scene.add(newObj);
+            objects[draggingObject + Date.now()] = newObj;
+            
+            showFeedback(`${objectDefinitions[draggingObject].name} dropped!`);
+            draggingObject = null;
+        });
+        
+        // ============ PHYSICS & ANIMATION ============
+        function resetScene() {
+            scene.children.forEach(child => {
+                if (child.userData && child.userData.density !== undefined) {
+                    scene.remove(child);
+                }
+            });
+            Object.keys(objects).forEach(key => delete objects[key]);
+            showFeedback('All objects cleared!');
+        }
+        
+        function updatePhysics() {
+            Object.keys(objects).forEach(key => {
+                const obj = objects[key];
+                if (!obj.userData.dropped) return;
+                
+                const waterSurfaceY = 3;
+                const objBottom = obj.position.y - obj.geometry.parameters.height / 2;
+                const objTop = obj.position.y + obj.geometry.parameters.height / 2;
+                const inWater = objBottom < waterSurfaceY && objTop > 0;
+                
+                obj.userData.inWater = inWater;
+                
+                if (inWater) {
+                    // Buoyancy: less dense objects float, more dense objects sink
+                    if (obj.userData.density < WATER_DENSITY) {
+                        obj.userData.velocity.y += BUOYANT_FORCE;
+                    } else {
+                        obj.userData.velocity.y -= GRAVITY;
+                    }
+                    
+                    // Damping (friction in water)
+                    obj.userData.velocity.y *= 0.98;
+                } else {
+                    // Gravity when not in water
+                    obj.userData.velocity.y -= GRAVITY;
+                }
+                
+                // Update position
+                obj.position.y += obj.userData.velocity.y;
+                
+                // Clamp to container bounds
+                const size = obj.geometry.parameters.height / 2;
+                const minY = -1.5 + size;
+                const maxY = 4.5;
+                
+                if (obj.position.y < minY) {
+                    obj.position.y = minY;
+                    obj.userData.velocity.y = 0;
+                }
+                if (obj.position.y > maxY) {
+                    obj.position.y = maxY;
+                    obj.userData.velocity.y = 0;
+                }
+                
+                // Slight rotation for visual interest
+                obj.rotation.x += 0.005;
+                obj.rotation.z += 0.003;
+            });
+        }
+        
+        function showFeedback(message) {
+            const fb = document.getElementById('feedback');
+            fb.textContent = message;
+            fb.classList.add('show');
+            setTimeout(() => fb.classList.remove('show'), 2000);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            updatePhysics();
+            renderer.render(scene, camera);
+        }
+        
+        // ============ WINDOW RESIZE ============
+        window.addEventListener('resize', () => {
+            const width = canvasContainer.clientWidth;
+            const height = canvasContainer.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+        
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
