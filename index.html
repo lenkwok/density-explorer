@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Density Explorer - 2D Interactive</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+        .container { 
+            width: 100%; 
+            max-width: 1000px; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+            overflow: hidden;
+        }
+        .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            padding: 20px; 
+            text-align: center; 
+        }
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .header p { font-size: 13px; opacity: 0.9; }
+        .content { 
+            display: grid; 
+            grid-template-columns: 250px 1fr; 
+            gap: 15px; 
+            padding: 15px; 
+            min-height: 600px;
+        }
+        .sidebar { 
+            background: #f5f5f5; 
+            padding: 15px; 
+            border-radius: 8px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px;
+            overflow-y: auto;
+        }
+        .sidebar h3 { color: #667eea; font-size: 13px; margin-bottom: 8px; }
+        .object-item { 
+            background: white; 
+            border: 2px solid #ddd; 
+            padding: 10px; 
+            border-radius: 6px; 
+            cursor: grab; 
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .object-item:hover { 
+            border-color: #667eea; 
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+        .object-item.dragging { opacity: 0.5; cursor: grabbing; }
+        .object-name { font-weight: bold; font-size: 13px; color: #333; }
+        .object-density { font-size: 11px; color: #666; margin-top: 3px; }
+        .badge { 
+            display: inline-block; 
+            background: #764ba2; 
+            color: white; 
+            padding: 2px 6px; 
+            border-radius: 8px; 
+            font-size: 10px; 
+            font-weight: bold;
+        }
+        .instructions { 
+            background: #fffacd; 
+            border-left: 3px solid #ffc107; 
+            border-radius: 6px; 
+            padding: 10px; 
+            font-size: 12px; 
+            line-height: 1.4;
+            color: #333;
+        }
+        .instructions h4 { margin-bottom: 6px; }
+        .instructions ol { margin-left: 16px; }
+        .instructions li { margin-bottom: 3px; }
+        .reset-btn { 
+            background: #667eea; 
+            color: white; 
+            border: none; 
+            padding: 10px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .reset-btn:hover { 
+            background: #764ba2; 
+            transform: translateY(-2px);
+        }
+        #canvas { 
+            width: 100%; 
+            height: 100%; 
+            border: 2px solid #667eea; 
+            border-radius: 8px; 
+            background: #e8f4f8; 
+            cursor: crosshair;
+        }
+        @media (max-width: 600px) {
+            .content { grid-template-columns: 1fr; }
+            .header h1 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌊 Density Explorer</h1>
+            <p>Drag objects into water to see them sink or float!</p>
+        </div>
+        <div class="content">
+            <div class="sidebar">
+                <div>
+                    <h3>📦 Drag These Objects:</h3>
+                    <div class="object-item" draggable="true" data-object="iron" data-density="7.87">
+                        <div class="object-name">🔩 Iron</div>
+                        <div class="object-density"><span class="badge">7.87</span> - SINKS</div>
+                    </div>
+                    <div class="object-item" draggable="true" data-object="marble" data-density="2.51">
+                        <div class="object-name">🔵 Marble</div>
+                        <div class="object-density"><span class="badge">2.51</span> - SINKS</div>
+                    </div>
+                    <div class="object-item" draggable="true" data-object="rock" data-density="2.65">
+                        <div class="object-name">🪨 Rock</div>
+                        <div class="object-density"><span class="badge">2.65</span> - SINKS</div>
+                    </div>
+                    <div class="object-item" draggable="true" data-object="plastic" data-density="0.95">
+                        <div class="object-name">🎲 Plastic</div>
+                        <div class="object-density"><span class="badge">0.95</span> - FLOATS</div>
+                    </div>
+                    <div class="object-item" draggable="true" data-object="wood" data-density="0.6">
+                        <div class="object-name">🪵 Wood</div>
+                        <div class="object-density"><span class="badge">0.6</span> - FLOATS</div>
+                    </div>
+                    <div class="object-item" draggable="true" data-object="cork" data-density="0.24">
+                        <div class="object-name">🍾 Cork</div>
+                        <div class="object-density"><span class="badge">0.24</span> - FLOATS</div>
+                    </div>
+                </div>
+                <div class="instructions">
+                    <h4>How to Play:</h4>
+                    <ol>
+                        <li>Drag an object</li>
+                        <li>Drop into the BLUE WATER</li>
+                        <li>Watch it sink or float!</li>
+                        <li>Try all 6 objects</li>
+                    </ol>
+                </div>
+                <button class="reset-btn" onclick="resetAll()">↻ Clear All</button>
+            </div>
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const water = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            width: 250,
+            height: 200,
+            density: 1.0
+        };
+
+        const objectDefs = {
+            iron: { emoji: '🔩', density: 7.87, color: '#505050', size: 20 },
+            marble: { emoji: '🔵', density: 2.51, color: '#4A90E2', size: 16 },
+            rock: { emoji: '🪨', density: 2.65, color: '#9E9E9E', size: 18 },
+            plastic: { emoji: '🎲', density: 0.95, color: '#FF6B6B', size: 16 },
+            wood: { emoji: '🪵', density: 0.6, color: '#8B4513', size: 18 },
+            cork: { emoji: '🍾', density: 0.24, color: '#D4A574', size: 20 }
+        };
+
+        let objects = [];
+        let draggingType = null;
+        let message = '';
+        let messageTime = 0;
+
+        document.addEventListener('dragstart', (e) => {
+            if (!e.target.classList.contains('object-item')) return;
+            draggingType = e.target.dataset.object;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        document.addEventListener('dragend', (e) => {
+            if (e.target.classList.contains('object-item')) {
+                e.target.classList.remove('dragging');
+            }
+        });
+
+        canvas.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        canvas.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (!draggingType) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const def = objectDefs[draggingType];
+            objects.push({
+                type: draggingType,
+                x: x,
+                y: y,
+                vx: 0,
+                vy: 0,
+                density: def.density,
+                radius: def.size / 2,
+                emoji: def.emoji,
+                color: def.color
+            });
+
+            message = `${draggingType.toUpperCase()} dropped!`;
+            messageTime = Date.now();
+            draggingType = null;
+        });
+
+        function resetAll() {
+            objects = [];
+            message = 'All objects cleared!';
+            messageTime = Date.now();
+        }
+
+        function drawWater() {
+            ctx.fillStyle = 'rgba(59, 163, 208, 0.3)';
+            ctx.fillRect(
+                water.x - water.width / 2,
+                water.y - water.height / 2,
+                water.width,
+                water.height
+            );
+
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(
+                water.x - water.width / 2,
+                water.y - water.height / 2,
+                water.width,
+                water.height
+            );
+
+            ctx.strokeStyle = 'rgba(100, 181, 246, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(water.x - water.width / 2, water.y - water.height / 2);
+            ctx.lineTo(water.x + water.width / 2, water.y - water.height / 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#667eea';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('WATER', water.x, water.y - water.height / 2 + 25);
+        }
+
+        function drawObjects() {
+            objects.forEach((obj, idx) => {
+                const inWater = 
+                    obj.x > water.x - water.width / 2 &&
+                    obj.x < water.x + water.width / 2 &&
+                    obj.y > water.y - water.height / 2 &&
+                    obj.y < water.y + water.height / 2;
+
+                if (inWater) {
+                    if (obj.density < water.density) {
+                        obj.vy -= 0.15;
+                    } else {
+                        obj.vy += 0.1;
+                    }
+                    obj.vy *= 0.95;
+                } else {
+                    obj.vy += 0.2;
+                }
+
+                obj.y += obj.vy;
+                obj.x += obj.vx;
+
+                if (inWater) {
+                    if (obj.y - obj.radius < water.y - water.height / 2) {
+                        obj.y = water.y - water.height / 2 + obj.radius;
+                        obj.vy = 0;
+                    }
+                    if (obj.y + obj.radius > water.y + water.height / 2) {
+                        obj.y = water.y + water.height / 2 - obj.radius;
+                        obj.vy = 0;
+                    }
+                }
+
+                if (obj.y + obj.radius > canvas.height) {
+                    obj.y = canvas.height - obj.radius;
+                    obj.vy *= -0.5;
+                }
+
+                ctx.fillStyle = obj.color;
+                ctx.beginPath();
+                ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.font = (obj.radius * 1.5) + 'px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(obj.emoji, obj.x, obj.y);
+
+                ctx.font = 'bold 11px Arial';
+                ctx.fillStyle = '#333';
+                ctx.fillText(obj.type, obj.x, obj.y + obj.radius + 15);
+            });
+        }
+
+        function draw() {
+            ctx.fillStyle = '#e8f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawWater();
+            drawObjects();
+
+            if (Date.now() - messageTime < 2000) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(message, canvas.width / 2, 30);
+            }
+
+            ctx.fillStyle = '#666';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('💡 Drag objects here ↓', 10, canvas.height - 10);
+
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+</html>
